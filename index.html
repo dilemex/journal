@@ -1810,9 +1810,8 @@ function recalcRAndPnl(){
   const risk   = parseFloat($('t-risk').value);
   const rr     = parseFloat($('t-rr').value);
   const dir    = $('t-dir').value;
-  const result = $('t-result').value;
-  const balance = parseFloat(settings.accountBalance) || 0;
-
+const result = $('t-result').value;
+const balance = getActiveBalance();
   const rField   = $('t-rmult');
   const pnlField = $('t-pnl');
   const hint     = $('calc-hint');
@@ -1963,13 +1962,13 @@ function recalcSizeFromRisk(){
   if(size > 0 && isFinite(size)) $('t-size').value = size.toFixed(2);
 }
 
-function recalcRiskFromSize(){
+ function recalcRiskFromSize(){
   const $ = id => document.getElementById(id);
   const entry      = parseFloat($('t-entry').value);
   const sl         = parseFloat($('t-sl').value);
   const size       = parseFloat($('t-size').value);
   const multiplier = parseFloat($('t-multiplier').value);
-  const balance    = parseFloat(settings.accountBalance) || 0;
+  const balance    = getActiveBalance();
 
   if(isNaN(entry) || isNaN(sl) || isNaN(size) || isNaN(multiplier) || balance <= 0 || entry === sl || multiplier <= 0) return;
 
