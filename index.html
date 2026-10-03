@@ -3677,6 +3677,13 @@ function saveAccount(){
   renderSettingsPage();
   renderActiveAccountUI();
   renderDashboard();
+  // Se a conta editada é a ativa e o painel de trade está aberto, recalcula
+  if(activeAccountId === (editingAccountId || activeAccountId)){
+    if(document.getElementById('tradePanel').classList.contains('open')){
+      recalcSizeFromRisk();
+      recalcRAndPnl();
+    }
+  }
   showToast('Conta salva.');
 }
 
