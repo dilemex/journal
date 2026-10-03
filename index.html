@@ -1953,7 +1953,7 @@ function recalcSizeFromRisk(){
   const sl         = parseFloat($('t-sl').value);
   const risk       = parseFloat($('t-risk').value);
   const multiplier = parseFloat($('t-multiplier').value);
-  const balance    = parseFloat(settings.accountBalance) || 0;
+  const balance    = getActiveBalance();
 
   if(isNaN(entry) || isNaN(sl) || isNaN(risk) || isNaN(multiplier) || balance <= 0 || entry === sl || multiplier <= 0) return;
 
