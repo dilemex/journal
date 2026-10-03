@@ -1583,6 +1583,14 @@ const expandedTrades = new Set();
 function getActiveAccount(){
   return accounts.find(a => a.id === activeAccountId) || accounts[0] || null;
 }
+function getActiveBalance(){
+  const acc = getActiveAccount();
+  if(acc && acc.balance !== undefined && acc.balance !== null && acc.balance !== ''){
+    return parseFloat(acc.balance) || 0;
+  }
+  return parseFloat(settings.accountBalance) || 0;
+  }
+
 function getAccountById(id){
   return accounts.find(a => a.id === id) || null;
 }
