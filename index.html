@@ -2366,6 +2366,7 @@ function populateWatchForm(w){
   const panel = document.getElementById('watchPanel');
   setRadioValue('w-bias', w.bias, panel);
   setRadioValue('w-quality', w.quality, panel);
+  setRadioValue('w-status', w.status || 'Observacao', panel);
   const t = document.getElementById('w-alert-tog');
   if(t && w.alert){ t.classList.add('on'); t.setAttribute('aria-checked','true'); }
 }
@@ -3722,11 +3723,18 @@ function renderWatchlist(){
     const dotClass = w.bias === 'Bullish' ? 'dot-bull' : w.bias === 'Bearish' ? 'dot-bear' : 'dot-neu';
     const qClass = w.quality === 'Excellent' ? 'q-excellent' : w.quality === 'Good' ? 'q-good' : 'q-neutral';
     const qLabel = w.quality === 'Excellent' ? 'Excelente' : w.quality === 'Good' ? 'Bom' : 'Neutro';
+
+    const st = w.status || 'Observacao';
+    let stClass = 'status-obs', stLabel = 'Observação';
+    if(st === 'Preparacao'){ stClass = 'status-prep'; stLabel = 'Preparação'; }
+    else if(st === 'Ativacao'){ stClass = 'status-act'; stLabel = 'Ativação'; }
+
     return '<div class="watch-card">'+
       '<div class="watch-card-top">'+
         '<div class="watch-asset">'+(esc(w.asset)||'—')+'</div>'+
         '<div class="watch-bias"><div class="dot '+dotClass+'"></div><span style="font-size:12px;color:var(--muted)">'+(esc(w.bias)||'—')+'</span></div>'+
       '</div>'+
+      '<div style="margin-bottom:10px"><span class="watch-status '+stClass+'"><span class="ws-dot"></span>'+stLabel+'</span></div>'+
       '<div class="watch-detail">Zona: <span>'+(esc(w.zone)||'—')+'</span></div>'+
       '<div class="watch-detail">Preço: <span style="font-family:\'DM Mono\'">'+(esc(w.price)||'—')+'</span></div>'+
       (w.notes ? '<div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5">'+esc(w.notes)+'</div>' : '')+
@@ -3734,7 +3742,8 @@ function renderWatchlist(){
         '<span class="quality-badge '+qClass+'">'+qLabel+'</span>'+
         (w.alert ? '<span style="font-size:11px;color:var(--accent)">🔔 Alerta ativo</span>' : '')+
       '</div>'+
-      '<div class="watch-actions">'+
+      '<div class="watch-actions" style="flex-wrap:wrap">'+
+        '<button class="btn btn-primary btn-sm" onclick="createTradeFromWatch(\''+esc(w.id)+'\')">📈 Criar Trade</button>'+
         '<button class="btn btn-ghost btn-sm" onclick="openWatchPanel(\''+esc(w.id)+'\')">Editar</button>'+
         '<button class="btn btn-danger btn-sm" onclick="deleteWatch(\''+esc(w.id)+'\')">Remover</button>'+
       '</div>'+
