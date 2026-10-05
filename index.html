@@ -1130,7 +1130,8 @@ async function processSyncQueue(){
   markSyncing();
 
   const remaining = [];
-  for(const item of q){
+  for(let i = 0; i < q.length; i++){
+    const item = q[i];
     try {
       await fetch(SHEET_WEBHOOK_URL, {
         method: 'POST',
@@ -1140,6 +1141,10 @@ async function processSyncQueue(){
       });
     } catch(e){
       remaining.push(item);
+    }
+    // Delay de 150ms entre chamadas (evita rate limit do Apps Script)
+    if(i < q.length - 1){
+      await new Promise(function(resolve){ setTimeout(resolve, 150); });
     }
   }
 
