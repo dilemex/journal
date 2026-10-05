@@ -2526,16 +2526,28 @@ if(window._pendingWatchToRemove){
 
 function saveWatch(){
   const zoneText = document.getElementById('w-zone').value;
-  // Extrai min/max da zona (aceita "1.0850 – 1.0870", "1.0850 - 1.0870", "1.0850/1.0870")
+  // Aceita:
+  // - "1.0850 – 1.0870" → zona
+  // - "1.0850 - 1.0870" → zona
+  // - "1.0850/1.0870"   → zona
+  // - "1.0850"          → linha (nível único)
   let zoneMin = '', zoneMax = '';
   if(zoneText){
     const nums = String(zoneText).match(/\d+[.,]?\d*/g);
     if(nums && nums.length >= 2){
+      // Zona
       const a = parseFloat(nums[0].replace(',', '.'));
       const b = parseFloat(nums[1].replace(',', '.'));
       if(!isNaN(a) && !isNaN(b)){
         zoneMin = Math.min(a, b);
         zoneMax = Math.max(a, b);
+      }
+    } else if(nums && nums.length === 1){
+      // Linha (nível único) — min e max iguais
+      const a = parseFloat(nums[0].replace(',', '.'));
+      if(!isNaN(a)){
+        zoneMin = a;
+        zoneMax = a;
       }
     }
   }
