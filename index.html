@@ -1409,30 +1409,7 @@ async function autoSyncOnOpen(force){
 
   await loadFromSheet(true);
 }
-  
-async function autoSyncOnOpen(){
-  if(!SHEET_WEBHOOK_URL) return;
-  if(!navigator.onLine) return;
-
-  // Evita rodar várias vezes em poucos segundos (ex: se o usuário alterna entre abas)
-  const now = Date.now();
-  if(autoSyncOnOpen._last && (now - autoSyncOnOpen._last) < 30000) return;
-  autoSyncOnOpen._last = now;
-
-  // Se há fila pendente, processa primeiro
-  if(getSyncQueue().length > 0){
-    await processSyncQueue();
-  }
-
-  // Se ainda há fila (offline ou falhou), NÃO sobrescreve os dados locais
-  if(getSyncQueue().length > 0){
-    console.warn('Auto-sync cancelado: ' + getSyncQueue().length + ' item(s) pendentes na fila.');
-    return;
-  }
-
-  await loadFromSheet(true);
-}
-  
+    
 // ===========================
 // HELPERS
 // ===========================
@@ -4257,9 +4234,6 @@ document.addEventListener('visibilitychange', () => {
   }, { passive: true });
 })();
 
-let resizeTimer;
-window.addEventListener('resize', () => {
-  
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
