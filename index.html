@@ -2498,6 +2498,21 @@ async function saveTrade(){
     closePanel('tradePanel');
     renderJournal();
     renderDashboard();
+
+// Se veio da Watchlist, pergunta se quer remover
+if(window._pendingWatchToRemove){
+  const watchId = window._pendingWatchToRemove;
+  window._pendingWatchToRemove = null;
+  setTimeout(() => {
+    if(confirm('Trade criado com sucesso! Deseja remover este ativo da Watchlist?')){
+      watchlist = watchlist.filter(x => String(x.id) !== String(watchId));
+      save();
+      syncToSheet('deleteWatch', { id: watchId });
+      renderWatchlist();
+      showToast('Ativo removido da Watchlist.');
+    }
+  }, 400);
+}
   } catch(err){
     console.error('Erro ao salvar trade:', err);
     showToast('Erro ao salvar: ' + err.message);
@@ -3757,6 +3772,63 @@ function deleteWatch(id){
   save();
   syncToSheet('deleteWatch', { id });
   renderWatchlist();
+}
+
+async function createTradeFromWatch(watchId){
+  const w = watchlist.find(x => String(x.id) === String(watchId));
+  if(!w) return;
+
+  // Abre painel de trade em branco
+  await openTradePanel();
+
+  // Pré-preenche o que dá
+  if(w.asset){
+    document.getElementById('t-asset').value = w.asset;
+    const multField = document.getElementById('t-multiplier');
+    if(multField){
+      multField.value = getAssetMultiplier(w.asset);
+      multField.dataset.userEdited = 'true';
+    }
+  }
+
+  const panel = document.getElementById('tradePanel');
+
+  // Direção derivada do viés
+  if(w.bias === 'Bullish') setRadioValue('t-dir', 'Long', panel);
+  else if(w.bias === 'Bearish') setRadioValue('t-dir', 'Short', panel);
+
+  // Viés W1
+  if(w.bias) setRadioValue('t-bias', w.bias, panel);
+
+  // Entry: tenta extrair do preço, senão do primeiro número da zona
+  let entryValue = '';
+  if(w.price){
+    const p = parseFloat(String(w.price).replace(',', '.'));
+    if(!isNaN(p)) entryValue = p;
+  }
+  if(!entryValue && w.zone){
+    const m = String(w.zone).match(/\d+[.,]?\d*/);
+    if(m) entryValue = parseFloat(m[0].replace(',', '.'));
+  }
+  if(entryValue) document.getElementById('t-entry').value = entryValue;
+
+  // Notas: junta zona + notas da watchlist
+  const parts = [];
+  if(w.zone) parts.push('📍 Zona: ' + w.zone);
+  if(w.notes) parts.push(w.notes);
+  if(parts.length) document.getElementById('t-notes').value = parts.join('\n\n');
+
+  // Título indica origem
+  document.getElementById('tradePanelTitle').textContent = 'Nova Operação (da Watchlist)';
+
+  // Guarda referência para oferecer remoção após salvar
+  window._pendingWatchToRemove = String(w.id);
+
+  // Foca no SL para o usuário continuar
+  setTimeout(() => {
+    const slField = document.getElementById('t-sl');
+    if(slField) slField.focus();
+  }, 300);
 }
 
 // ===========================
