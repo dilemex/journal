@@ -2368,8 +2368,10 @@ function populateWatchForm(w){
   setRadioValue('w-quality', w.quality, panel);
   setRadioValue('w-status', w.status || 'Observacao', panel);
   const t = document.getElementById('w-alert-tog');
-  if(t && w.alert){ t.classList.add('on'); t.setAttribute('aria-checked','true'); }
-}
+  if(t){
+    t.classList.toggle('on', !!w.alert);
+    t.setAttribute('aria-checked', w.alert ? 'true' : 'false');
+  }
 
 // ===========================
 // SAVES
@@ -2522,18 +2524,39 @@ if(window._pendingWatchToRemove){
 }
 
 function saveWatch(){
+  const zoneText = document.getElementById('w-zone').value;
+  // Extrai min/max da zona (aceita "1.0850 – 1.0870", "1.0850 - 1.0870", "1.0850/1.0870")
+  let zoneMin = '', zoneMax = '';
+  if(zoneText){
+    const nums = String(zoneText).match(/\d+[.,]?\d*/g);
+    if(nums && nums.length >= 2){
+      const a = parseFloat(nums[0].replace(',', '.'));
+      const b = parseFloat(nums[1].replace(',', '.'));
+      if(!isNaN(a) && !isNaN(b)){
+        zoneMin = Math.min(a, b);
+        zoneMax = Math.max(a, b);
+      }
+    }
+  }
+
+  const existing = editingWatch ? watchlist.find(x => String(x.id) === String(editingWatch)) : null;
   const w = {
     id: editingWatch || Date.now().toString(),
     asset: document.getElementById('w-asset').value,
     bias: document.getElementById('w-bias').value,
-    zone: document.getElementById('w-zone').value,
+    zone: zoneText,
+    zoneMin: zoneMin,
+    zoneMax: zoneMax,
     price: document.getElementById('w-price').value,
     notes: document.getElementById('w-notes').value,
-  quality: document.getElementById('w-quality').value,
-  status: document.getElementById('w-status').value || 'Observacao',
-  alert: document.getElementById('w-alert-tog').classList.contains('on'),
-  createdAt: new Date().toISOString()
-};
+    quality: document.getElementById('w-quality').value,
+    status: document.getElementById('w-status').value || 'Observacao',
+    alert: document.getElementById('w-alert-tog').classList.contains('on'),
+    alertTriggered: existing ? (existing.alertTriggered || false) : false,
+    lastPrice: existing ? (existing.lastPrice || '') : '',
+    lastCheckAt: existing ? (existing.lastCheckAt || '') : '',
+    createdAt: (existing && existing.createdAt) ? existing.createdAt : new Date().toISOString()
+  };
   if(editingWatch){
     const idx = watchlist.findIndex(x => String(x.id) === String(editingWatch));
     if(idx > -1) watchlist[idx] = w;
@@ -3751,12 +3774,19 @@ function renderWatchlist(){
       '</div>'+
       '<div style="margin-bottom:10px"><span class="watch-status '+stClass+'"><span class="ws-dot"></span>'+stLabel+'</span></div>'+
       '<div class="watch-detail">Zona: <span>'+(esc(w.zone)||'—')+'</span></div>'+
-      '<div class="watch-detail">Preço: <span style="font-family:\'DM Mono\'">'+(esc(w.price)||'—')+'</span></div>'+
+      '<div class="watch-detail">Preço ref: <span style="font-family:\'DM Mono\'">'+(esc(w.price)||'—')+'</span></div>'+
+      (w.lastPrice ? '<div class="watch-detail">Último preço: <span style="font-family:\'DM Mono\';color:var(--accent)">'+(parseFloat(w.lastPrice)||0).toFixed(4)+'</span></div>' : '')+
+      (w.lastCheckAt ? '<div style="font-size:10px;color:var(--muted);margin-bottom:4px">Verificado: '+new Date(w.lastCheckAt).toLocaleString('pt-BR')+'</div>' : '')+
       (w.notes ? '<div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5">'+esc(w.notes)+'</div>' : '')+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:6px;flex-wrap:wrap">'+
         '<span class="quality-badge '+qClass+'">'+qLabel+'</span>'+
-        (w.alert ? '<span style="font-size:11px;color:var(--accent)">🔔 Alerta ativo</span>' : '')+
+        (w.alert
+          ? (w.alertTriggered
+              ? '<span style="font-size:11px;color:var(--green)">🚨 Alerta disparado</span>'
+              : '<span style="font-size:11px;color:var(--accent)">🔔 Alerta ativo</span>')
+          : '<span style="font-size:11px;color:var(--muted)">🔕 Sem alerta</span>')+
       '</div>'+
+      (w.alertTriggered ? '<button class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px;justify-content:center" onclick="resetWatchAlert(\''+esc(w.id)+'\')">↺ Resetar alerta</button>' : '')+
       '<div class="watch-actions" style="flex-wrap:wrap">'+
         '<button class="btn btn-primary btn-sm" onclick="createTradeFromWatch(\''+esc(w.id)+'\')">📈 Criar Trade</button>'+
         '<button class="btn btn-ghost btn-sm" onclick="openWatchPanel(\''+esc(w.id)+'\')">Editar</button>'+
@@ -3831,6 +3861,18 @@ async function createTradeFromWatch(watchId){
   }, 300);
 }
 
+async function resetWatchAlert(watchId){
+  const w = watchlist.find(x => String(x.id) === String(watchId));
+  if(!w) return;
+  w.alertTriggered = false;
+  w.lastCheckAt = new Date().toISOString();
+  save();
+  // Atualiza só esse item na planilha (via saveWatch completo, mantendo todos os campos)
+  await syncToSheet('saveWatch', w);
+  renderWatchlist();
+  showToast('Alerta resetado. Próximo rompimento vai disparar e-mail.');
+}
+  
 // ===========================
 // REVIEWS
 // ===========================
