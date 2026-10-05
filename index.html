@@ -3431,11 +3431,15 @@ async function deleteSelectedTrades(){
   const count = selectedTrades.size;
   if(!count) return;
   if(!confirm('Excluir ' + count + ' operação(ões) permanentemente?')) return;
-  const ids = Array.from(selectedTrades);
+
+  const ids = Array.from(selectedTrades).map(String);
+
+  // 1) Limpa screenshots do IndexedDB (local)
   for(const id of ids){
-    try { await ScreenshotDB.deleteForTrade(String(id)); } catch(e){}
-    syncToSheet('deleteTrade', { id });
+    try { await ScreenshotDB.deleteForTrade(id); } catch(e){}
   }
+
+  // 2) Atualiza estado local imediatamente (UI responde na hora)
   trades = trades.filter(t => !selectedTrades.has(String(t.id)));
   selectedTrades.clear();
   save();
@@ -3443,6 +3447,32 @@ async function deleteSelectedTrades(){
   renderDashboard();
   updateSelectionUI();
   showToast(count + ' operação(ões) excluída(s).');
+
+  // 3) Envia para o Sheets em UMA única requisição
+  if(!SHEET_WEBHOOK_URL) return;
+
+  if(!navigator.onLine){
+    // Offline: enfileira cada um individualmente (a fila processa quando voltar)
+    ids.forEach(id => enqueueSync('deleteTrade', { id }));
+    setSyncStatus('pending');
+    return;
+  }
+
+  markSyncing();
+  try {
+    await fetch(SHEET_WEBHOOK_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'deleteTradesBatch', data: { ids } })
+    });
+    markSynced();
+  } catch(e){
+    console.warn('Batch delete falhou — enfileirando individualmente:', e);
+    // Fallback: enfileira para retry
+    ids.forEach(id => enqueueSync('deleteTrade', { id }));
+    markSyncError(e);
+  }
 }
 
 function fixDriveUrl(url){
