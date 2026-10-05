@@ -2562,6 +2562,12 @@ function signedR(t){
   return 0;
 }
 
+function fmtHolding(h){
+  const n = parseFloat(h);
+  if(isNaN(n) || n <= 0) return '—';
+  return n < 24 ? n.toFixed(1) + 'h' : (n/24).toFixed(1) + 'd';
+}
+  
 function calcStats(tradeList = trades){
   const closed = tradeList.filter(t => t.result);
   const wins = closed.filter(t => t.result === 'Win');
@@ -2831,11 +2837,11 @@ function renderHoldingPerf(tradeList){
   const avg = arr => arr.length ? (arr.reduce((s,t) => s + parseFloat(t.holding), 0) / arr.length) : 0;
   const avgW = avg(winners);
   const avgL = avg(losers);
-  const fmtH = h => {
-    if(!h) return '—';
-    if(h < 24) return h.toFixed(1) + 'h';
-    return (h/24).toFixed(1) + 'd';
-  };
+const fmtH = h => {
+  const n = parseFloat(h);
+  if(isNaN(n) || n <= 0) return '—';
+  return n < 24 ? n.toFixed(1) + 'h' : (n/24).toFixed(1) + 'd';
+};
   let ratioText = '';
   if(avgW && avgL){
     const ratio = avgW / avgL;
@@ -3319,7 +3325,7 @@ function renderJournal(){
               '<div class="expand-row"><span class="k">Exit</span><span class="v">'+(esc(t.exit)||'—')+'</span></div>'+
               '<div class="expand-row"><span class="k">Risco</span><span class="v">'+(esc(t.risk)||'—')+'%</span></div>'+
               '<div class="expand-row"><span class="k">Tamanho</span><span class="v">'+(esc(t.size)||'—')+'</span></div>'+
-              '<div class="expand-row"><span class="k">Holding</span><span class="v">'+(t.holding ? (t.holding < 24 ? t.holding.toFixed(1)+'h' : (t.holding/24).toFixed(1)+'d') : '—')+'</span></div>'+
+'<div class="expand-row"><span class="k">Holding</span><span class="v">'+fmtHolding(t.holding)+'</span></div>'+
               '<div class="expand-row"><span class="k">Entrada</span><span class="v">'+(esc(t.date)||'—')+' '+(esc(t.entryTime)||'')+'</span></div>'+
               '<div class="expand-row"><span class="k">Saída</span><span class="v">'+(t.exitDate ? esc(t.exitDate)+' '+esc(t.exitTime||'') : '—')+'</span></div>'+
               '<div class="expand-row"><span class="k">Motivo Saída</span><span class="v">'+(esc(t.exitReason)||'—')+'</span></div>'+
