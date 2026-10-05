@@ -460,12 +460,15 @@ textarea.form-control{resize:vertical;min-height:90px}
 <main id="main">
 
   <div id="page-dashboard" class="page active">
-    <div class="page-header flex items-center justify-between">
+      <div class="page-header flex items-center justify-between">
       <div>
         <h1>Dashboard</h1>
         <p>Visão geral da sua performance</p>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="loadFromSheet()" title="Recarregar da planilha">🔄 Atualizar</button>
+      <button class="btn btn-primary btn-sm" onclick="openTradePanel()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nova Operação
+      </button>
     </div>
     <div class="filter-card">
       <div class="filter-head">
@@ -1303,6 +1306,42 @@ async function syncAllToSheet(){
   showToast('Enviado: '+count+' registros.');
 }
 
+function mergeTradesFromSheet(remoteTrades){
+  // Deduplica também no lado do servidor (caso o Sheets tenha 2 linhas com o mesmo ID)
+  const seen = new Set();
+  const remoteClean = [];
+  remoteTrades.forEach(rt => {
+    const k = String(rt.id);
+    if(seen.has(k)) return;
+    seen.add(k);
+    remoteClean.push(rt);
+  });
+
+  const localById = new Map();
+  trades.forEach(t => localById.set(String(t.id), t));
+
+  const merged = [];
+  const unsynced = [];
+
+  // 1) Trades do servidor prevalecem
+  remoteClean.forEach(rt => {
+    merged.push(rt);
+    localById.delete(String(rt.id));
+  });
+
+  // 2) Trades só locais (não chegaram no Sheets) são mantidos e re-enfileirados
+  localById.forEach(t => {
+    merged.push(t);
+    unsynced.push(t);
+  });
+
+  merged.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  trades = merged;
+
+  // Re-enfileira o que estava só local
+  unsynced.forEach(t => enqueueSync('saveTrade', t));
+}
+  
 async function loadFromSheet(silent){
   if(!SHEET_WEBHOOK_URL){
     if(!silent) showToast('Configure a URL do Apps Script primeiro.');
@@ -1316,7 +1355,7 @@ async function loadFromSheet(silent){
       if(!silent) showToast('Erro: '+(data.message || 'desconhecido'));
       return;
     }
-    if(Array.isArray(data.trades))    trades    = data.trades;
+    if(Array.isArray(data.trades))    mergeTradesFromSheet(data.trades);
     if(Array.isArray(data.watchlist)) watchlist = data.watchlist;
     if(Array.isArray(data.reviews))   reviews   = data.reviews;
     if(data.system && Object.keys(data.system).length) systemData = data.system;
@@ -1348,6 +1387,29 @@ async function loadFromSheet(silent){
   }
 }
 
+async function autoSyncOnOpen(force){
+  if(!SHEET_WEBHOOK_URL) return;
+  if(!navigator.onLine) return;
+
+  // Debounce: evita rodar múltiplas vezes em poucos segundos
+  const now = Date.now();
+  if(!force && autoSyncOnOpen._last && (now - autoSyncOnOpen._last) < 30000) return;
+  autoSyncOnOpen._last = now;
+
+  // Se há fila pendente, processa primeiro
+  if(getSyncQueue().length > 0){
+    await processSyncQueue();
+  }
+
+  // Se ainda há fila, NÃO sobrescreve os dados locais
+  if(getSyncQueue().length > 0){
+    console.warn('Auto-sync cancelado: ' + getSyncQueue().length + ' item(s) pendentes.');
+    return;
+  }
+
+  await loadFromSheet(true);
+}
+  
 async function autoSyncOnOpen(){
   if(!SHEET_WEBHOOK_URL) return;
   if(!navigator.onLine) return;
@@ -4132,6 +4194,72 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+// ===========================
+// PULL TO REFRESH (mobile)
+// ===========================
+(function setupPullToRefresh(){
+  const main = document.getElementById('main');
+  if(!main) return;
+
+  // Só ativa em dispositivos com touch
+  if(!('ontouchstart' in window)) return;
+
+  let startY = 0;
+  let pulling = false;
+  let dist = 0;
+  const THRESHOLD = 70;
+
+  const ind = document.createElement('div');
+  ind.id = 'ptrIndicator';
+  ind.style.cssText = 'position:fixed;top:52px;left:50%;transform:translate(-50%,-80px);z-index:96;background:var(--card2);border:1px solid var(--border2);color:var(--muted);padding:6px 14px;border-radius:20px;font-size:11px;transition:transform .25s ease,opacity .25s ease;opacity:0;pointer-events:none;font-family:inherit;box-shadow:0 4px 12px rgba(0,0,0,.3)';
+  ind.textContent = 'Puxe para atualizar';
+  document.body.appendChild(ind);
+
+  main.addEventListener('touchstart', e => {
+    if(main.scrollTop > 0) return;
+    startY = e.touches[0].clientY;
+    pulling = true;
+    dist = 0;
+  }, { passive: true });
+
+  main.addEventListener('touchmove', e => {
+    if(!pulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if(dy <= 0){ dist = 0; return; }
+    dist = Math.min(dy * 0.5, 110);
+    ind.style.transform = 'translate(-50%,' + (dist - 60) + 'px)';
+    ind.style.opacity = String(Math.min(dist / THRESHOLD, 1));
+    ind.textContent = dist >= THRESHOLD ? '↑ Solte para atualizar' : '↓ Puxe para atualizar';
+  }, { passive: true });
+
+  main.addEventListener('touchend', async () => {
+    if(!pulling) return;
+    pulling = false;
+    if(dist >= THRESHOLD){
+      ind.textContent = '🔄 Atualizando...';
+      ind.style.transform = 'translate(-50%,0)';
+      ind.style.opacity = '1';
+      try {
+        await autoSyncOnOpen(true);
+        ind.textContent = '✓ Atualizado';
+      } catch(e){
+        ind.textContent = '✗ Falha ao atualizar';
+      }
+      setTimeout(() => {
+        ind.style.transform = 'translate(-50%,-80px)';
+        ind.style.opacity = '0';
+      }, 900);
+    } else {
+      ind.style.transform = 'translate(-50%,-80px)';
+      ind.style.opacity = '0';
+    }
+    dist = 0;
+  }, { passive: true });
+})();
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
