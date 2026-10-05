@@ -936,8 +936,16 @@ textarea.form-control{resize:vertical;min-height:90px}
         </div>
       </div>
       <div class="form-group">
+      <div class="form-group mb-2">
         <label for="acc-color">Cor</label>
         <input class="form-control" id="acc-color" type="color" value="#3b82f6" style="height:38px;padding:4px;cursor:pointer">
+      </div>
+      <div class="form-group mb-2">
+        <label for="acc-mt5">Número da Conta no MT5 (opcional)</label>
+        <input class="form-control" id="acc-mt5" placeholder="Ex: 55798119" inputmode="numeric">
+      </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.5">
+        Preencha se você quer que a importação de arquivos do MT5 roteie automaticamente os trades para esta conta.
       </div>
     </div>
   </div>
@@ -3721,6 +3729,7 @@ function openAccountPanel(accountId = null){
   document.getElementById('acc-balance').value = acc ? (acc.balance || '') : '';
   document.getElementById('acc-broker').value = acc ? (acc.broker || '') : '';
   document.getElementById('acc-color').value = acc ? (acc.color || '#3b82f6') : '#3b82f6';
+  document.getElementById('acc-mt5').value = acc ? (acc.mt5Account || '') : '';
   openPanel('accountPanel');
 }
 
@@ -3730,12 +3739,13 @@ function saveAccount(){
   const balance = parseFloat(document.getElementById('acc-balance').value) || 0;
   const broker = document.getElementById('acc-broker').value.trim();
   const color = document.getElementById('acc-color').value || '#3b82f6';
+  const mt5Account = document.getElementById('acc-mt5').value.trim();
 
   if(editingAccountId){
     const acc = getAccountById(editingAccountId);
-    if(acc){ acc.name = name; acc.balance = balance; acc.broker = broker; acc.color = color; }
+    if(acc){ acc.name = name; acc.balance = balance; acc.broker = broker; acc.color = color; acc.mt5Account = mt5Account; }
   } else {
-    const newAcc = { id: 'acc_' + Date.now(), name, balance, broker, color, currency: 'USD', createdAt: new Date().toISOString() };
+    const newAcc = { id: 'acc_' + Date.now(), name, balance, broker, color, mt5Account, currency: 'USD', createdAt: new Date().toISOString() };
     accounts.push(newAcc);
     if(!activeAccountId) activeAccountId = newAcc.id;
   }
@@ -3839,6 +3849,7 @@ function renderAccountsSection(){
     const count = trades.filter(t => t.accountId === acc.id).length;
     preview.innerHTML =
       (acc.broker ? esc(acc.broker)+' · ' : '')+
+      (acc.mt5Account ? 'MT5: '+esc(acc.mt5Account)+' · ' : '')+
       'Saldo: $'+((acc.balance || 0).toLocaleString('pt-BR'))+
       ' · '+count+' trade'+(count !== 1 ? 's' : '');
   }
