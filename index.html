@@ -2513,10 +2513,11 @@ function saveWatch(){
     zone: document.getElementById('w-zone').value,
     price: document.getElementById('w-price').value,
     notes: document.getElementById('w-notes').value,
-    quality: document.getElementById('w-quality').value,
-    alert: document.getElementById('w-alert-tog').classList.contains('on'),
-    createdAt: new Date().toISOString()
-  };
+  quality: document.getElementById('w-quality').value,
+  status: document.getElementById('w-status').value || 'Observacao',
+  alert: document.getElementById('w-alert-tog').classList.contains('on'),
+  createdAt: new Date().toISOString()
+};
   if(editingWatch){
     const idx = watchlist.findIndex(x => String(x.id) === String(editingWatch));
     if(idx > -1) watchlist[idx] = w;
