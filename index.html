@@ -1001,6 +1001,15 @@ textarea.form-control{resize:vertical;min-height:90px}
         </div>
         <input type="hidden" id="w-quality">
       </div>
+<div class="form-group mb-4">
+  <label>Status / Fase</label>
+  <div class="radio-group" role="radiogroup">
+    <button type="button" class="radio-btn" data-field="w-status" data-value="Observacao" aria-pressed="false" onclick="selectRadio(this)">🔵 Observação</button>
+    <button type="button" class="radio-btn" data-field="w-status" data-value="Preparacao" aria-pressed="false" onclick="selectRadio(this)">🟡 Preparação</button>
+    <button type="button" class="radio-btn" data-field="w-status" data-value="Ativacao" aria-pressed="false" onclick="selectRadio(this)">🟢 Ativação</button>
+  </div>
+  <input type="hidden" id="w-status">
+      </div>
       <div class="toggle-wrap">
         <span class="toggle-label">Alerta ativo?</span>
         <div class="toggle" role="switch" aria-checked="false" tabindex="0" id="w-alert-tog" onclick="toggleEl(this)"></div>
