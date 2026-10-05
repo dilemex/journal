@@ -500,6 +500,7 @@ textarea.form-control{resize:vertical;min-height:90px}
       <div id="streakAlertText"></div>
     </div>
     <div class="stats-grid" id="statsGrid"></div>
+    <div class="stats-grid" id="statsGridAdvanced"></div>
     <div class="chart-area mb-4">
       <div class="chart-title">Curva de Equity</div>
       <div class="chart-canvas-wrap"><canvas id="equityChart"></canvas></div>
@@ -2632,7 +2633,40 @@ function calcStats(tradeList = trades){
   }
 
   const expectancy = closed.length ? (closed.reduce((s,t) => s + signedR(t), 0) / closed.length) : 0;
-  return { winRate, totalPnl, pf, total: tradeList.length, closed: closed.length, currentStreak, expectancy };
+
+  // --- Métricas avançadas ---
+  const winRs = wins.map(t => signedR(t)).filter(r => r > 0);
+  const lossRs = losses.map(t => Math.abs(signedR(t))).filter(r => r > 0);
+  const avgWinR = winRs.length ? (winRs.reduce((s,r) => s+r, 0) / winRs.length) : 0;
+  const avgLossR = lossRs.length ? (lossRs.reduce((s,r) => s+r, 0) / lossRs.length) : 0;
+  const payoffRatio = avgLossR > 0 ? (avgWinR / avgLossR) : 0;
+
+  // Maior sequência de losses na série histórica (ordem cronológica)
+  let maxLossStreak = 0, tempStreak = 0;
+  const chrono = [...closed].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  chrono.forEach(t => {
+    if(t.result === 'Loss'){ tempStreak++; if(tempStreak > maxLossStreak) maxLossStreak = tempStreak; }
+    else { tempStreak = 0; }
+  });
+
+  // R planejado vs realizado (só em trades que têm R:R preenchido)
+  const validEff = closed.filter(t => { const p = parseFloat(t.rr); return !isNaN(p) && p > 0; });
+  const avgPlannedR = validEff.length
+    ? validEff.reduce((s, t) => s + parseFloat(t.rr), 0) / validEff.length
+    : 0;
+  const avgRealizedR = validEff.length
+    ? validEff.reduce((s, t) => s + signedR(t), 0) / validEff.length
+    : 0;
+  const execEfficiency = validEff.length
+    ? (validEff.reduce((s, t) => s + (signedR(t) / parseFloat(t.rr)), 0) / validEff.length) * 100
+    : 0;
+
+  return {
+    winRate, totalPnl, pf, total: tradeList.length, closed: closed.length,
+    currentStreak, expectancy,
+    avgWinR, avgLossR, payoffRatio, maxLossStreak,
+    avgPlannedR, avgRealizedR, execEfficiency
+  };
 }
 
 function calcDrawdown(tradeList, startingBalance){
@@ -2684,6 +2718,31 @@ function renderDashboard(){
     '<div class="stat-card"><div class="stat-label">Expectancy</div><div class="stat-value '+expClass+'">'+expSign+stats.expectancy.toFixed(2)+'R</div><div class="stat-sub">por trade</div></div>'+
     '<div class="stat-card"><div class="stat-label">Max Drawdown</div><div class="stat-value red">'+maxDDStr+'</div><div class="stat-sub">'+dd.maxDDPct.toFixed(1)+'% do pico</div></div>'+
     '<div class="stat-card"><div class="stat-label">Avg Drawdown</div><div class="stat-value red">'+avgDDStr+'</div><div class="stat-sub">'+dd.avgDDPct.toFixed(1)+'% do pico</div></div>';
+
+  // Segundo grid: métricas avançadas
+  const advGrid = document.getElementById('statsGridAdvanced');
+  if(advGrid){
+    const winRStr = stats.avgWinR > 0 ? '+' + stats.avgWinR.toFixed(2) + 'R' : '—';
+    const lossRStr = stats.avgLossR > 0 ? '-' + stats.avgLossR.toFixed(2) + 'R' : '—';
+    const payoffStr = stats.payoffRatio > 0 ? stats.payoffRatio.toFixed(2) + '×' : '—';
+    const payoffCls = stats.payoffRatio >= 1.5 ? 'green' : stats.payoffRatio >= 1 ? 'accent' : 'red';
+    const maxStreakStr = stats.maxLossStreak > 0 ? '-' + stats.maxLossStreak : '—';
+    const plannedStr = stats.avgPlannedR > 0 ? '+' + stats.avgPlannedR.toFixed(2) + 'R' : '—';
+    const realizedStr = stats.avgRealizedR !== 0 ? (stats.avgRealizedR >= 0 ? '+' : '') + stats.avgRealizedR.toFixed(2) + 'R' : '—';
+    const realizedCls = stats.avgRealizedR > 0 ? 'green' : stats.avgRealizedR < 0 ? 'red' : '';
+    const effStr = stats.avgPlannedR > 0 ? stats.execEfficiency.toFixed(0) + '%' : '—';
+    const effCls = stats.execEfficiency >= 80 ? 'green' : stats.execEfficiency >= 60 ? 'accent' : stats.execEfficiency > 0 ? 'red' : '';
+    const effSub = stats.avgPlannedR > 0 ? 'realizado / planejado' : 'sem alvos preenchidos';
+
+    advGrid.innerHTML =
+      '<div class="stat-card"><div class="stat-label">Avg Win R</div><div class="stat-value green">'+winRStr+'</div><div class="stat-sub">média dos winners</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Avg Loss R</div><div class="stat-value red">'+lossRStr+'</div><div class="stat-sub">média dos losers</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Payoff Ratio</div><div class="stat-value '+payoffCls+'">'+payoffStr+'</div><div class="stat-sub">win médio ÷ loss médio</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Maior Seq. Losses</div><div class="stat-value red">'+maxStreakStr+'</div><div class="stat-sub">recorde histórico</div></div>'+
+      '<div class="stat-card"><div class="stat-label">R Realizado</div><div class="stat-value '+realizedCls+'">'+realizedStr+'</div><div class="stat-sub">planejado: '+plannedStr+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Eficiência</div><div class="stat-value '+effCls+'">'+effStr+'</div><div class="stat-sub">'+effSub+'</div></div>';
+  }
+
   renderEquityChart(filtered);
   renderMonthlyChart(filtered);
   renderRecentTrades(filtered);
