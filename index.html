@@ -4270,7 +4270,7 @@ function renderMultipliersSection(){
   const grid = document.getElementById('multipliersGrid');
   if(!grid) return;
   const overrides = settings.multipliers || {};
-  grid.innerHTML = ASSETS.map(asset => {
+  grid.innerHTML = getAssets().map(asset => {
     const val = (overrides[asset] !== undefined && overrides[asset] !== '')
       ? overrides[asset]
       : (ASSET_MULTIPLIER_DEFAULTS[asset] || 1);
