@@ -1510,6 +1510,22 @@ function normalizeDate(v){
   return s;
 }
 
+function normalizeTime(v){
+  if(!v) return '';
+  const s = String(v);
+  // Já está correto (HH:MM)
+  if(/^\d{2}:\d{2}$/.test(s)) return s;
+  // Formato ISO (1899-12-31T02:52:28.000Z ou 2025-01-10T03:00:00.000Z)
+  const m = s.match(/T(\d{2}):(\d{2})/);
+  if(m) return m[1] + ':' + m[2];
+  // Objeto Date serializado de outra forma
+  const d = new Date(s);
+  if(!isNaN(d.getTime())){
+    return String(d.getUTCHours()).padStart(2,'0') + ':' + String(d.getUTCMinutes()).padStart(2,'0');
+  }
+  return s;
+}
+
 function normalizeAllDates(){
   let changed = false;
   [trades, watchlist, reviews].forEach(list => {
@@ -1518,6 +1534,13 @@ function normalizeAllDates(){
       ['date','createdAt'].forEach(key => {
         if(item[key]){
           const n = normalizeDate(item[key]);
+          if(n !== item[key]){ item[key] = n; changed = true; }
+        }
+      });
+      // Normaliza os horários nos trades
+      ['entryTime','exitTime'].forEach(key => {
+        if(item[key]){
+          const n = normalizeTime(item[key]);
           if(n !== item[key]){ item[key] = n; changed = true; }
         }
       });
