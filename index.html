@@ -1589,8 +1589,12 @@ async function compressImage(file, maxDim = 1200, quality = 0.65){
 function getAssetMultiplier(asset){
   const overrides = settings.multipliers || {};
   if(overrides[asset] !== undefined && overrides[asset] !== '') return parseFloat(overrides[asset]);
-  return ASSET_MULTIPLIER_DEFAULTS[asset] || 1;
-}
+  if(ASSET_MULTIPLIER_DEFAULTS[asset]) return ASSET_MULTIPLIER_DEFAULTS[asset];
+  // Heurística para ativos novos
+  if(asset.endsWith('JPY')) return 1000;
+  if(/^[A-Z]{6}$/.test(asset)) return 100000;
+  return 1;
+  }
 
 // ===========================
 // STORAGE
