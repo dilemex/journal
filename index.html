@@ -1738,6 +1738,121 @@ function getAccountName(id){
   return a ? a.name : '—';
 }
 
+function getAssets(){
+  if(Array.isArray(settings.assets) && settings.assets.length) return settings.assets;
+  return ASSETS;
+}
+
+function getAssetYahooSymbol(asset){
+  const userSymbols = settings.assetYahooSymbols || {};
+  if(userSymbols[asset]) return userSymbols[asset];
+  return '';
+}
+
+function populateAssetSelects(){
+  const list = getAssets();
+  // Inclui ativos que aparecem em trades/watchlist mas não estão na lista (para não perder referência)
+  const usedAssets = new Set();
+  trades.forEach(t => t.asset && usedAssets.add(t.asset));
+  watchlist.forEach(w => w.asset && usedAssets.add(w.asset));
+  const extras = [...usedAssets].filter(a => !list.includes(a)).sort();
+
+  document.querySelectorAll('[data-asset-select]').forEach(sel => {
+    const emptyLabel = sel.dataset.emptyLabel || 'Todos';
+    const current = sel.value;
+    let html = '<option value="">' + emptyLabel + '</option>';
+    html += list.map(a => '<option>' + a + '</option>').join('');
+    if(extras.length){
+      html += '<optgroup label="Não cadastrados (em uso)">';
+      html += extras.map(a => '<option>' + a + '</option>').join('');
+      html += '</optgroup>';
+    }
+    sel.innerHTML = html;
+    if(current) sel.value = current;
+  });
+}
+
+function renderAssetsSection(){
+  const el = document.getElementById('assetsList');
+  if(!el) return;
+  const list = getAssets();
+  if(!list.length){
+    el.innerHTML = '<div class="text-sm text-muted" style="padding:8px 0">Nenhum ativo cadastrado.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px">' +
+    list.map(a => {
+      const tradesCount = trades.filter(t => t.asset === a).length;
+      const watchCount = watchlist.filter(w => w.asset === a).length;
+      const usage = tradesCount + watchCount;
+      const yahooSym = getAssetYahooSymbol(a);
+      const title = usage > 0
+        ? usage + ' registro(s) — ' + tradesCount + ' trade(s) · ' + watchCount + ' watchlist'
+        : (yahooSym ? 'Yahoo: ' + yahooSym : 'Sem uso');
+      return '<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:12px" title="'+esc(title)+'">' +
+        '<span style="font-family:\'DM Mono\',monospace;font-weight:500">'+esc(a)+'</span>' +
+        (usage > 0 ? '<span style="color:var(--muted);font-size:10px">'+usage+'</span>' : '') +
+        '<button onclick="removeAsset(\''+esc(a)+'\')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:13px;line-height:1;display:flex;align-items:center;margin-left:2px" title="Remover">✕</button>' +
+      '</div>';
+    }).join('') +
+  '</div>';
+}
+
+function addAsset(){
+  const assetInput = document.getElementById('newAssetInput');
+  const yahooInput = document.getElementById('newAssetYahoo');
+  const raw = assetInput.value.trim().toUpperCase().replace(/\s+/g, '');
+  const yahoo = yahooInput.value.trim();
+
+  if(!raw){ showToast('Digite o nome do ativo.'); return; }
+  if(!/^[A-Z0-9]+$/.test(raw)){ showToast('Use apenas letras e números (sem espaços ou símbolos).'); return; }
+
+  const current = getAssets();
+  if(current.includes(raw)){
+    showToast('Este ativo já está cadastrado.');
+    return;
+  }
+
+  settings.assets = [...current, raw];
+  if(yahoo){
+    settings.assetYahooSymbols = Object.assign({}, settings.assetYahooSymbols || {}, { [raw]: yahoo });
+  }
+
+  save();
+  syncToSheet('saveSettings', settings);
+
+  assetInput.value = '';
+  yahooInput.value = '';
+
+  renderAssetsSection();
+  populateAssetSelects();
+  renderMultipliersSection();
+  showToast(raw + ' adicionado.');
+}
+
+function removeAsset(name){
+  const tradesCount = trades.filter(t => t.asset === name).length;
+  const watchCount = watchlist.filter(w => w.asset === name).length;
+
+  let msg = 'Remover "' + name + '" dos ativos?';
+  if(tradesCount > 0 || watchCount > 0){
+    msg = 'Existem ' + tradesCount + ' trade(s) e ' + watchCount + ' item(ns) da watchlist com "' + name + '".\n\nRemover o ativo NÃO apaga esses registros — eles continuarão no Journal e aparecerão numa seção "Não cadastrados" dos dropdowns.\n\nContinuar?';
+  }
+  if(!confirm(msg)) return;
+
+  settings.assets = getAssets().filter(a => a !== name);
+  if(settings.assetYahooSymbols && settings.assetYahooSymbols[name]){
+    delete settings.assetYahooSymbols[name];
+  }
+  save();
+  syncToSheet('saveSettings', settings);
+
+  renderAssetsSection();
+  populateAssetSelects();
+  renderMultipliersSection();
+  showToast(name + ' removido.');
+}
+  
 function migrateToAccounts(){
   let changed = false;
   if(!accounts || !accounts.length){
