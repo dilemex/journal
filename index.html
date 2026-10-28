@@ -677,8 +677,27 @@ textarea.form-control{resize:vertical;min-height:90px}
       </div>
     </div>
 
-    <div class="settings-section">
-      <div class="settings-title">Multiplicadores por Ativo</div>
+<div class="settings-section">
+  <div class="settings-title">Ativos Disponíveis</div>
+  <div class="info-box">
+    Esses são os ativos que aparecem nos dropdowns de trade e watchlist. Você pode adicionar novos (ex: EURJPY, US30, DOGEUSD) ou remover os que não usa. <strong>Remover um ativo não apaga os trades dele</strong> — só o esconde dos dropdowns, e ele continua acessível numa seção "Não cadastrados" enquanto houver registros usando.
+  </div>
+  <div id="assetsList"></div>
+  <div class="form-grid cols2" style="margin-top:14px;max-width:600px">
+    <div class="form-group">
+      <label for="newAssetInput">Novo Ativo</label>
+      <input id="newAssetInput" class="form-control" placeholder="Ex: EURJPY, US30, DOGEUSD" maxlength="20">
+    </div>
+    <div class="form-group">
+      <label for="newAssetYahoo">Símbolo Yahoo (opcional)</label>
+      <input id="newAssetYahoo" class="form-control" placeholder="Ex: EURJPY=X, ^DJI">
+    </div>
+  </div>
+  <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="addAsset()">+ Adicionar Ativo</button>
+</div>
+
+<div class="settings-section">
+  <div class="settings-title">Multiplicadores por Ativo</div>
       <div class="info-box">
         Valor monetário de <strong>1.0 de movimento de preço por 1 lote</strong>. Usado no cálculo automático de tamanho (lotes) e risco %.
         💡 Forex ≈ 100.000 · JPY ≈ 1.000 · XAUUSD ≈ 100 · Cripto / Índices = 1
