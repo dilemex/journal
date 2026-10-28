@@ -4462,12 +4462,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   migrateToAccounts();
   renderActiveAccountUI();
 
-  document.querySelectorAll('[data-asset-select]').forEach(sel => {
-    const emptyLabel = sel.dataset.emptyLabel || 'Todos';
-    const current = sel.value;
-    sel.innerHTML = '<option value="">'+emptyLabel+'</option>' + ASSETS.map(a => '<option>'+a+'</option>').join('');
-    if(current) sel.value = current;
-  });
+  // Migração: se settings.assets não existir, inicializa com os padrões
+if(!Array.isArray(settings.assets) || !settings.assets.length){
+  settings.assets = [...ASSETS];
+  save();
+}
+
+populateAssetSelects();
 
   setupImageUploads();
 
