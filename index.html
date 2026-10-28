@@ -1531,7 +1531,7 @@ function normalizeAllDates(){
   [trades, watchlist, reviews].forEach(list => {
     if(!Array.isArray(list)) return;
     list.forEach(item => {
-      ['date','createdAt'].forEach(key => {
+      ['date','exitDate','createdAt'].forEach(key => {
         if(item[key]){
           const n = normalizeDate(item[key]);
           if(n !== item[key]){ item[key] = n; changed = true; }
