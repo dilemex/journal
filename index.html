@@ -800,6 +800,7 @@ textarea.form-control{resize:vertical;min-height:90px}
             <label class="check-row"><input type="checkbox" id="c-h4conf"> <span>Confirmação H4</span></label>
             <label class="check-row"><input type="checkbox" id="c-entryconf"> <span>Entrada na confirmação</span></label>
             <label class="check-row"><input type="checkbox" id="c-entrytouch"> <span>Entrada no toque</span></label>
+            <label class="check-row"><input type="checkbox" id="c-entrybreak"> <span>Entrada no rompimento</span></label>
             <label class="check-row"><input type="checkbox" id="c-ema"> <span>Confluência EMA</span></label>
             <label class="check-row"><input type="checkbox" id="c-fib"> <span>Confluência Fibonacci</span></label>
             <label class="check-row"><input type="checkbox" id="c-liq"> <span>Alvo de liquidez identificado</span></label>
@@ -1089,10 +1090,10 @@ textarea.form-control{resize:vertical;min-height:90px}
 // ===========================
 const ASSETS = ['EURUSD','GBPUSD','USDJPY','GBPJPY','XAUUSD','AUDUSD','USDCAD','NZDUSD','BTCUSD','ETHUSD','SOLUSD','USTEC','JP225','US500'];
 
-const CHECK_LABELS_HTML = {'c-w1align':'W1 alinhada','c-d1bos':'D1 BOS','c-disp':'Deslocamento','c-zone':'Zona-chave','c-react':'Reação','c-h4conf':'H4 conf.','c-entryconf':'Entry confirmação','c-entrytouch':'Entry toque','c-ema':'EMA','c-fib':'Fibonacci','c-liq':'Liquidez'};
-const CHECK_LABELS_CSV = {'c-w1align':'W1 Aligned','c-d1bos':'D1 BOS','c-disp':'Displacement','c-zone':'Key Zone Return','c-react':'Reaction Candle','c-h4conf':'H4 Confirmation','c-entryconf':'Entry on Confirmation','c-entrytouch':'Entry on Touch','c-ema':'EMA Confluence','c-fib':'Fibonacci Confluence','c-liq':'Liquidity Target'};
+const CHECK_LABELS_HTML = {'c-w1align':'W1 alinhada','c-d1bos':'D1 BOS','c-disp':'Deslocamento','c-zone':'Zona-chave','c-react':'Reação','c-h4conf':'H4 conf.','c-entryconf':'Entry confirmação','c-entrytouch':'Entry toque','c-entrybreak':'Entry rompimento','c-ema':'EMA','c-fib':'Fibonacci','c-liq':'Liquidez'};
+const CHECK_LABELS_CSV = {'c-w1align':'W1 Aligned','c-d1bos':'D1 BOS','c-disp':'Displacement','c-zone':'Key Zone Return','c-react':'Reaction Candle','c-h4conf':'H4 Confirmation','c-entryconf':'Entry on Confirmation','c-entrytouch':'Entry on Touch','c-entrybreak':'Entry on Breakout','c-ema':'EMA Confluence','c-fib':'Fibonacci Confluence','c-liq':'Liquidity Target'};
 
-const SYSTEM_CONFIG = [
+  const SYSTEM_CONFIG = [
   {key:'aplus',label:'Critérios Setup A+'},
   {key:'valid',label:'Critérios Setup Válido'},
   {key:'risk',label:'Regras de Gestão de Risco'},
@@ -2410,7 +2411,7 @@ function clearTradeForm(){
     b.classList.remove('selected');
     b.setAttribute('aria-pressed','false');
   });
-  ['c-w1align','c-d1bos','c-disp','c-zone','c-react','c-h4conf','c-entryconf','c-entrytouch','c-ema','c-fib','c-liq','t-w1','t-d1','t-h4'].forEach(id => {
+  ['c-w1align','c-d1bos','c-disp','c-zone','c-react','c-h4conf','c-entryconf','c-entrytouch','c-entrybreak','c-ema','c-fib','c-liq','t-w1','t-d1','t-h4'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.checked = false;
   });
@@ -2562,6 +2563,7 @@ async function saveTrade(){
         'c-h4conf': document.getElementById('c-h4conf').checked,
         'c-entryconf': document.getElementById('c-entryconf').checked,
         'c-entrytouch': document.getElementById('c-entrytouch').checked,
+        'c-entrybreak': document.getElementById('c-entrybreak').checked,
         'c-ema': document.getElementById('c-ema').checked,
         'c-fib': document.getElementById('c-fib').checked,
         'c-liq': document.getElementById('c-liq').checked,
